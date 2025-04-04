@@ -8,14 +8,14 @@ import javax.swing.JOptionPane;
 public class flappyBird extends JPanel implements ActionListener, KeyListener {
     int boardWidth = 360;
     int boardHeight = 640;
-
+    boolean gameStart = false;
     Image backgroundImg;
     Image birdImg;
     Image topPipeImg;
     Image bottomPipeImg;
 
-    int birdX = boardWidth/8;
-    int birdY = boardHeight/2;
+    int birdX = boardWidth/8 ;
+    int birdY = boardHeight/2 ;
     int birdWidth = 54;
     int birdHeight = 44;
 
@@ -50,12 +50,12 @@ public class flappyBird extends JPanel implements ActionListener, KeyListener {
     }
 
     Bird bird;
-    int velocityX = -4;
+    int velocityX = -5   ;
     int velocityY = 0;
     int gravity = 1;
 
     ArrayList<Pipe> pipes;
-    Random random = new Random();
+
 
     javax.swing.Timer gameLoop;
     javax.swing.Timer placePipeTimer;
@@ -69,25 +69,25 @@ public class flappyBird extends JPanel implements ActionListener, KeyListener {
         setFocusable(true);
         addKeyListener(this);
 
-        backgroundImg = new ImageIcon(getClass().getResource("./background.png")).getImage();
-        birdImg = new ImageIcon(getClass().getResource("./bird.png")).getImage();
-        topPipeImg = new ImageIcon(getClass().getResource("./pipetop.png")).getImage();
-        bottomPipeImg = new ImageIcon(getClass().getResource("./pipebottom.png")).getImage();
+        backgroundImg = new ImageIcon(getClass().getResource("./imgs/background.png")).getImage();
+        birdImg = new ImageIcon(getClass().getResource("./imgs/bird.png")).getImage();
+        topPipeImg = new ImageIcon(getClass().getResource("./imgs/pipetop.png")).getImage();
+        bottomPipeImg = new ImageIcon(getClass().getResource("./imgs/pipebottom.png")).getImage();
 
         bird = new Bird(birdImg);
         pipes = new ArrayList<>();
         loadHighScore();
 
-        placePipeTimer = new javax.swing.Timer(2000, e -> placePipes());
-        placePipeTimer.start();
+        placePipeTimer = new javax.swing.Timer(2000,e -> placePipes());
+
 
         gameLoop = new javax.swing.Timer(1000/50, this);
-        gameLoop.start();
+
     }
 
     void placePipes() {
         int randomPipeY = (int) (pipeY - pipeHeight/4 - Math.random()*(pipeHeight/2));
-        int openingSpace = boardHeight/4;
+        int openingSpace =  boardHeight/4;
 
         Pipe topPipe = new Pipe(topPipeImg);
         topPipe.y = randomPipeY;
@@ -112,24 +112,49 @@ public class flappyBird extends JPanel implements ActionListener, KeyListener {
         }
 
         g.setColor(Color.white);
-        g.setFont(new Font("Arial", Font.PLAIN, 32));
+        g.setFont(new Font("DISCO RETRO", Font.PLAIN, 32));
         g.drawString("Score: " + (int) score, 10, 35);
         g.drawString("High Score: " + highScore, 10, 70);
+
+        if (gameOver) {
+            g.setColor(Color.RED);
+            g.setFont(new Font("Arial", Font.BOLD, 32));
+            g.drawString("Game Over", posx - 30, posy);
+        }
+
+        if (!gameStart) {
+            g.setColor(Color.YELLOW);
+            g.setFont(new Font("Arial", Font.BOLD, 32));
+            g.drawString("Press SPACE to Start", boardWidth / 18, boardHeight / 2);
+        }
     }
+
+    int posx , posy;
 
     public void move() {
         velocityY += gravity;
         bird.y += velocityY;
         bird.y = Math.max(bird.y, 0);
 
-        for (Pipe pipe : pipes) {
-            pipe.x += velocityX;
-            if (!pipe.passed && bird.x > pipe.x + pipe.width) {
-                score += 0.5;
-                pipe.passed = true;
+        for (int i = 0; i < pipes.size(); i += 2) {
+            Pipe topPipe = pipes.get(i);
+            Pipe bottomPipe = pipes.get(i + 1);
+
+            topPipe.x += velocityX;
+            bottomPipe.x += velocityX;
+
+            if (!topPipe.passed && bird.x > topPipe.x + topPipe.width) {
+                score += 1;
+                topPipe.passed = true;
             }
-            if (collision(bird, pipe)) {
+
+            if (collision(bird, topPipe) || collision(bird, bottomPipe)) {
                 gameOver = true;
+
+
+                posx = topPipe.x + topPipe.width / 2 - 50;
+                posy = topPipe.y + pipeHeight + (boardHeight / 6) / 2;
+                System.out.println(  posx + " " + posy);
             }
         }
 
@@ -137,6 +162,7 @@ public class flappyBird extends JPanel implements ActionListener, KeyListener {
             gameOver = true;
         }
     }
+
 
     boolean collision(Bird a, Pipe b) {
         return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
@@ -167,30 +193,44 @@ public class flappyBird extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        move();
-        repaint();
-        if (gameOver) {
-            placePipeTimer.stop();
-            gameLoop.stop();
-            saveHighScore();
+        if (gameStart) {
+            move();
+            repaint();
+            placePipeTimer.start();
+            if (gameOver) {
+                placePipeTimer.stop();
+                gameLoop.stop();
+                saveHighScore();
+            }
         }
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-            velocityY = -9;
-            if (gameOver) {
+            if (!gameStart && !gameOver) {
+
+                gameStart = true;
+                velocityY=-9;
+                gameLoop.start();
+                placePipeTimer.start();
+            } else if (gameOver) {
+
                 bird.y = birdY;
                 velocityY = 0;
                 pipes.clear();
-                gameOver = false;
                 score = 0;
-                gameLoop.start();
-                placePipeTimer.start();
+                gameOver = false;
+                gameStart = false;
+                repaint();
+            } else {
+
+                velocityY = -9;
             }
         }
     }
+
+
 
     @Override public void keyTyped(KeyEvent e) {}
     @Override public void keyReleased(KeyEvent e) {}
